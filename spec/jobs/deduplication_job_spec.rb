@@ -175,6 +175,37 @@ RSpec.describe ActiveStorageDedup::DeduplicationJob do
       end
     end
 
+    context "when removing duplicates" do
+      it "purges the duplicate blob record and its storage file" do
+        keeper = ActiveStorage::Blob.create!(
+          key: "keeper-key",
+          filename: "test.txt",
+          byte_size: 100,
+          checksum: checksum,
+          service_name: service_name,
+          created_at: 1.hour.ago
+        )
+
+        duplicate = ActiveStorage::Blob.create!(
+          key: "different-key",
+          filename: "test.txt",
+          byte_size: 100,
+          checksum: checksum,
+          service_name: service_name,
+          created_at: 30.minutes.ago
+        )
+
+        # Duplicate blobs always have different storage keys (unique index),
+        # so purge is always safe — it cleans up both the record and the file
+        expect_any_instance_of(ActiveStorage::Blob).to receive(:purge).and_call_original
+
+        described_class.perform_now
+
+        expect(ActiveStorage::Blob.exists?(keeper.id)).to be true
+        expect(ActiveStorage::Blob.exists?(duplicate.id)).to be false
+      end
+    end
+
     context "with different services" do
       it "only merges blobs from the same service" do
         local_blob1 = ActiveStorage::Blob.create!(

@@ -85,9 +85,8 @@ module ActiveStorageDedup
       keeper.increment!(:reference_count, attachment_count)
       Rails.logger.debug "[ActiveStorageDedup] Updated keeper #{keeper.id} reference_count to #{keeper.reference_count}"
 
-      # Delete the duplicate file from the storage service and remove the blob record.
-      # The file may have been uploaded twice (e.g., race condition),
-      # so we clean up the storage service copy too.
+      # Duplicate blobs always have a different storage key (unique index on key),
+      # so they have a separate file on the service that should be cleaned up.
       duplicate.purge
       Rails.logger.debug "[ActiveStorageDedup] Deleted duplicate blob #{duplicate.id} record"
 

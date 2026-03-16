@@ -23,10 +23,9 @@ module ActiveStorageDedup
 
       # Find all checksum+service combinations that have duplicates
       duplicate_groups = ActiveStorage::Blob
-                         .select(:checksum, :service_name)
                          .group(:checksum, :service_name)
                          .having("COUNT(*) > 1")
-                         .count
+                         .pluck(:checksum, :service_name)
 
       if duplicate_groups.empty?
         Rails.logger.info "[ActiveStorageDedup] ✓ No duplicate blobs found - database is clean!"
@@ -36,7 +35,7 @@ module ActiveStorageDedup
       Rails.logger.info "[ActiveStorageDedup] Found #{duplicate_groups.size} group(s) with duplicates"
 
       total_merged = 0
-      duplicate_groups.each_key do |(checksum, service_name)|
+      duplicate_groups.each do |(checksum, service_name)|
         merged = process_duplicate_group(checksum, service_name)
         total_merged += merged
       end
@@ -86,8 +85,10 @@ module ActiveStorageDedup
       keeper.increment!(:reference_count, attachment_count)
       Rails.logger.debug "[ActiveStorageDedup] Updated keeper #{keeper.id} reference_count to #{keeper.reference_count}"
 
-      # Delete duplicate blob record (without purging file, since it's same as keeper)
-      duplicate.delete
+      # Delete the duplicate file from the storage service and remove the blob record.
+      # The file may have been uploaded twice (e.g., race condition),
+      # so we clean up the storage service copy too.
+      duplicate.purge
       Rails.logger.debug "[ActiveStorageDedup] Deleted duplicate blob #{duplicate.id} record"
 
       Rails.logger.info "[ActiveStorageDedup] ✓ Merged blob #{duplicate.id} (#{attachment_count} attachment(s)) into #{keeper.id}"

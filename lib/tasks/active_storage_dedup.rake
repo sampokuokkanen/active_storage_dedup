@@ -11,6 +11,7 @@ namespace :active_storage_dedup do
                        .group(:checksum, :service_name)
                        .having("COUNT(*) > 1")
                        .order("blob_count DESC")
+                       .to_a
 
     if duplicate_groups.empty?
       puts "No duplicate blobs found!"
@@ -47,7 +48,7 @@ namespace :active_storage_dedup do
     end
 
     puts "\nSummary:"
-    puts "Total duplicate groups: #{duplicate_groups.count}"
+    puts "Total duplicate groups: #{duplicate_groups.size}"
     puts "Total duplicate blobs: #{total_duplicates}"
     puts "Total wasted storage: #{format_bytes(total_wasted_storage)}"
   end

@@ -51,14 +51,6 @@ RSpec.describe "active_storage_dedup rake tasks" do
         created_at: 30.minutes.ago
       )
 
-      duplicate_groups_stub = [
-        double(checksum: checksum, service_name: service_name, blob_count: 2)
-      ]
-      allow(ActiveStorage::Blob).to receive_message_chain(:select, :group, :having, :order)
-        .and_return(duplicate_groups_stub)
-      allow(duplicate_groups_stub).to receive(:empty?).and_return(false)
-      allow(duplicate_groups_stub).to receive(:count).and_return(1)
-
       output = capture_stdout do
         Rake::Task["active_storage_dedup:report_duplicates"].invoke
       end
@@ -94,14 +86,6 @@ RSpec.describe "active_storage_dedup rake tasks" do
         created_at: 30.minutes.ago
       )
 
-      duplicate_groups_stub = [
-        double(checksum: checksum, service_name: service_name, blob_count: 2)
-      ]
-      allow(ActiveStorage::Blob).to receive_message_chain(:select, :group, :having, :order)
-        .and_return(duplicate_groups_stub)
-      allow(duplicate_groups_stub).to receive(:empty?).and_return(false)
-      allow(duplicate_groups_stub).to receive(:count).and_return(1)
-
       output = capture_stdout do
         Rake::Task["active_storage_dedup:report_duplicates"].invoke
       end
@@ -134,15 +118,6 @@ RSpec.describe "active_storage_dedup rake tasks" do
           created_at: i.hours.ago
         )
       end
-
-      duplicate_groups_stub = [
-        double(checksum: checksum1, service_name: service_name, blob_count: 3),
-        double(checksum: checksum2, service_name: service_name, blob_count: 2)
-      ]
-      allow(ActiveStorage::Blob).to receive_message_chain(:select, :group, :having, :order)
-        .and_return(duplicate_groups_stub)
-      allow(duplicate_groups_stub).to receive(:empty?).and_return(false)
-      allow(duplicate_groups_stub).to receive(:count).and_return(2)
 
       output = capture_stdout do
         Rake::Task["active_storage_dedup:report_duplicates"].invoke
@@ -181,13 +156,9 @@ RSpec.describe "active_storage_dedup rake tasks" do
         created_at: 30.minutes.ago
       )
 
-      allow(ActiveStorage::Blob).to receive_message_chain(:select, :group, :having, :count)
-        .and_return({ [checksum, service_name] => 2 })
-
-      initial_count = ActiveStorage::Blob.count
-      expect(initial_count).to eq(2)
-
-      Rake::Task["active_storage_dedup:cleanup_all"].invoke
+      expect do
+        Rake::Task["active_storage_dedup:cleanup_all"].invoke
+      end.to change { ActiveStorage::Blob.count }.from(2).to(1)
     end
   end
 

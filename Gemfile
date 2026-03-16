@@ -11,3 +11,13 @@ gem "rake", "~> 13.0"
 gem "rspec", "~> 3.0"
 
 gem "rubocop", "~> 1.21"
+
+# Database adapters — selected via DB env var
+case ENV["DB"]
+when "postgresql"
+  gem "pg"
+when "mysql"
+  gem "mysql2"
+else
+  gem "sqlite3"
+end

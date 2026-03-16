@@ -173,6 +173,27 @@ RSpec.describe ActiveStorageDedup::DeduplicationJob do
         # Duplicate should still exist since merge failed before delete
         expect(ActiveStorage::Blob.exists?(duplicate.id)).to be true
       end
+
+      it "does not purge a duplicate that still has attachments" do
+        user = User.create!(name: "Test User")
+        ActiveStorage::Attachment.create!(
+          name: "avatar",
+          record: user,
+          blob: duplicate
+        )
+
+        job = described_class.new
+
+        # Simulate a partial failure: attachments not moved but no error raised.
+        # The safety check should prevent purging the blob.
+        allow(duplicate.attachments).to receive(:update_all)
+
+        job.send(:merge_duplicate, keeper, duplicate)
+
+        # Duplicate must still exist — its attachment wasn't moved
+        expect(ActiveStorage::Blob.exists?(duplicate.id)).to be true
+        expect(user.reload.avatar.blob.id).to eq(duplicate.id)
+      end
     end
 
     context "when removing duplicates" do

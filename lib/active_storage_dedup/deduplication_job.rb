@@ -85,6 +85,13 @@ module ActiveStorageDedup
       keeper.increment!(:reference_count, attachment_count)
       Rails.logger.debug "[ActiveStorageDedup] Updated keeper #{keeper.id} reference_count to #{keeper.reference_count}"
 
+      # Safety check: verify all attachments were moved before deleting.
+      # If any attachments still reference this blob, skip deletion to avoid data loss.
+      if duplicate.attachments.exists?
+        Rails.logger.error "[ActiveStorageDedup] ✗ Skipping deletion of blob #{duplicate.id} — it still has attachments"
+        return
+      end
+
       # Duplicate blobs always have a different storage key (unique index on key),
       # so they have a separate file on the service that should be cleaned up.
       duplicate.purge

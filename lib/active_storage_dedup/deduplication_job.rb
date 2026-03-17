@@ -56,6 +56,20 @@ module ActiveStorageDedup
 
       Rails.logger.debug "[ActiveStorageDedup] Found #{duplicate_blobs.size} blob(s) with checksum #{checksum[0..12]}..."
 
+      # Skip blobs referenced by ActionText — their sgids are embedded in HTML
+      # and cannot be safely updated by reassigning attachment records.
+      if action_text_available?
+        safe_blobs, action_text_blobs = duplicate_blobs.partition { |blob| !referenced_by_action_text?(blob) }
+
+        if action_text_blobs.any?
+          Rails.logger.info "[ActiveStorageDedup] Skipping #{action_text_blobs.size} blob(s) referenced by ActionText (checksum: #{checksum[0..12]}...)"
+        end
+
+        duplicate_blobs = safe_blobs
+      end
+
+      return 0 if duplicate_blobs.size < 2
+
       # Keep the oldest blob (first created)
       keeper = duplicate_blobs.first
       duplicates = duplicate_blobs[1..]
@@ -102,6 +116,14 @@ module ActiveStorageDedup
       Rails.logger.error "[ActiveStorageDedup] ✗ Error merging blob #{duplicate.id}: #{e.class.name} - #{e.message}"
       Rails.logger.debug "[ActiveStorageDedup] Error backtrace: #{e.backtrace.first(5).join("\n")}"
       # Don't raise - allow job to complete for other duplicates
+    end
+
+    def action_text_available?
+      defined?(ActionText::RichText)
+    end
+
+    def referenced_by_action_text?(blob)
+      blob.attachments.where(record_type: "ActionText::RichText").exists?
     end
   end
 end

@@ -13,7 +13,7 @@ require "combustion"
 
 # Initialize Combustion with Active Storage
 Combustion.path = "spec/internal"
-Combustion.initialize! :active_record, :active_storage, :active_job
+Combustion.initialize! :active_record, :active_storage, :active_job, :action_text
 
 load Rails.root.join("db", "schema.rb") if File.exist?(Rails.root.join("db", "schema.rb"))
 

@@ -42,4 +42,19 @@ ActiveRecord::Schema.define do
     t.string :name
     t.timestamps
   end
+
+  create_table :action_text_rich_texts, force: true do |t|
+    t.string     :name, null: false
+    t.text       :body
+    t.references :record, null: false, polymorphic: true, index: false
+    t.timestamps
+
+    t.index %i[record_type record_id name], name: "index_action_text_rich_texts_uniqueness",
+                                            unique: true
+  end
+
+  create_table :articles, force: true do |t|
+    t.string :title
+    t.timestamps
+  end
 end
